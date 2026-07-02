@@ -1,7 +1,22 @@
 import http from 'node:http';
 
-// Import the built server entry produced by the Vite/TanStack build
-import handler from './dist/server/server.js';
+// Diagnostic startup logging to aid Railway debugging
+console.log('Starting frontend server runner');
+console.log('NODE_VERSION', process.version);
+console.log('CWD', process.cwd());
+console.log('ENV PORT', process.env.PORT);
+
+// Dynamically import the built server entry produced by the Vite/TanStack build
+let handler;
+try {
+    const mod = await import('./dist/server/server.js');
+    handler = mod.default ?? mod;
+} catch (err) {
+    console.error('Failed to import built server entry at ./dist/server/server.js');
+    console.error(err && err.stack ? err.stack : err);
+    // Exit so Railway logs show the error and the container fails fast.
+    process.exit(1);
+}
 
 const PORT = Number(process.env.PORT || 3000);
 
