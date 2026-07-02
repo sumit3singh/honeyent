@@ -9,6 +9,6 @@
         "backend:build": "cd backend && npm run build",
         "backend:start": "cd backend && npm start",
         "build": "npm run frontend:build",
-        "start": "npm run frontend:start"
+        "start": "node server.js"
     }
 }
