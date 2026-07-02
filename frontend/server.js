@@ -7,14 +7,41 @@ console.log('CWD', process.cwd());
 console.log('ENV PORT', process.env.PORT);
 
 // Dynamically import the built server entry produced by the Vite/TanStack build
+import path from 'node:path';
+import { pathToFileURL, fileURLToPath } from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const candidates = [
+    // relative to this file (normal dev layout)
+    path.join(__dirname, 'dist', 'server', 'server.js'),
+    // if process.cwd() is repo root
+    path.join(process.cwd(), 'dist', 'server', 'server.js'),
+    // if build output is under frontend/dist when started from repo root
+    path.join(process.cwd(), 'frontend', 'dist', 'server', 'server.js'),
+    // one level up from this file
+    path.join(__dirname, '..', 'dist', 'server', 'server.js'),
+];
+
 let handler;
-try {
-    const mod = await import('./dist/server/server.js');
-    handler = mod.default ?? mod;
-} catch (err) {
-    console.error('Failed to import built server entry at ./dist/server/server.js');
-    console.error(err && err.stack ? err.stack : err);
-    // Exit so Railway logs show the error and the container fails fast.
+let lastError;
+for (const candidate of candidates) {
+    try {
+        console.log('Trying server entry at', candidate);
+        const mod = await import(pathToFileURL(candidate).href);
+        handler = mod.default ?? mod;
+        console.log('Loaded server entry from', candidate);
+        break;
+    } catch (err) {
+        lastError = err;
+        console.warn('Import failed for', candidate, err && err.code ? err.code : 'error');
+    }
+}
+
+if (!handler) {
+    console.error('Failed to import built server entry. Tried candidates:', candidates);
+    console.error('Last error:', lastError && (lastError.stack || lastError));
     process.exit(1);
 }
 
