@@ -1,0 +1,14 @@
+{
+    "name": "honeyent",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "install": "cd backend && npm install && cd ../frontend && npm install",
+        "frontend:build": "cd frontend && npm run build",
+        "frontend:start": "cd frontend && npm start",
+        "backend:build": "cd backend && npm run build",
+        "backend:start": "cd backend && npm start",
+        "build": "npm run frontend:build",
+        "start": "npm run frontend:start"
+    }
+}
