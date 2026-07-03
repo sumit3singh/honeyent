@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 
 interface Scene3DProps {
-    containerRef: React.RefObject<HTMLDivElement>;
+    containerRef: React.RefObject<HTMLDivElement | null>;
 }
 
 export function Scene3D({ containerRef }: Scene3DProps) {

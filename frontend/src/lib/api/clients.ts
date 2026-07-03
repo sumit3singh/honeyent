@@ -1,5 +1,28 @@
 // Default to same-origin API path in production when VITE_API_URL isn't provided.
-const API_URL = import.meta.env.VITE_API_URL ?? "/api";
+const rawApiUrl = import.meta.env.VITE_API_URL;
+const API_URL = normalizeApiUrl(rawApiUrl ?? "/api");
+
+function normalizeApiUrl(url: string): string {
+    if (typeof window === 'undefined') return url;
+
+    const fallback = "/api";
+    if (!url || url === fallback) return fallback;
+
+    try {
+        const parsed = new URL(url, window.location.href);
+        const isLocalHost = parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
+        const sameOrigin = parsed.origin === window.location.origin;
+
+        // If build-time env accidentally injected a local dev API URL, prefer same-origin `/api` for browser deployments.
+        if (isLocalHost && parsed.pathname === "/api" && !sameOrigin) {
+            return fallback;
+        }
+
+        return url;
+    } catch (err) {
+        return fallback;
+    }
+}
 
 function getAuthToken(): string | null {
     return typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
