@@ -81,24 +81,36 @@ function resolveStaticFile(urlPath) {
 async function serveStatic(req, res) {
     const url = new URL(req.url, `http://${req.headers.host}`);
     const filePath = resolveStaticFile(url.pathname);
+    console.log('serveStatic: request', url.pathname, 'resolved->', filePath);
     if (!filePath) return false;
-
-    if (!fs.existsSync(filePath)) {
+    const exists = fs.existsSync(filePath);
+    console.log('serveStatic: exists?', exists, filePath);
+    if (!exists) {
         return false;
     }
 
     res.statusCode = 200;
     res.setHeader('content-type', inferContentType(filePath));
-    const stream = fs.createReadStream(filePath);
-    stream.pipe(res);
-    stream.on('error', (error) => {
-        console.error('Static file stream error:', error);
+    try {
+        const stream = fs.createReadStream(filePath);
+        stream.on('open', () => console.log('serveStatic: streaming', filePath));
+        stream.pipe(res);
+        stream.on('error', (error) => {
+            console.error('Static file stream error:', error, filePath);
+            if (!res.headersSent) {
+                res.statusCode = 500;
+                res.setHeader('content-type', 'text/plain; charset=utf-8');
+            }
+            res.end('Internal Server Error');
+        });
+    } catch (err) {
+        console.error('serveStatic caught error:', err, filePath);
         if (!res.headersSent) {
             res.statusCode = 500;
             res.setHeader('content-type', 'text/plain; charset=utf-8');
         }
         res.end('Internal Server Error');
-    });
+    }
     return true;
 }
 
