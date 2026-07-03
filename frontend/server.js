@@ -62,23 +62,30 @@ async function proxyApiRequest(req, res) {
         ...(hasBody ? { body: req, duplex: 'half' } : {}),
     };
 
-    const response = await fetch(backendUrl, init);
-    res.statusCode = response.status;
-    for (const [k, v] of response.headers) {
-        if (k.toLowerCase() === 'transfer-encoding') continue;
-        res.setHeader(k, v);
-    }
-
-    if (!response.body) return res.end();
-    const reader = response.body.getReader();
     try {
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            res.write(Buffer.from(value));
+        const response = await fetch(backendUrl, init);
+        res.statusCode = response.status;
+        for (const [k, v] of response.headers) {
+            if (k.toLowerCase() === 'transfer-encoding') continue;
+            res.setHeader(k, v);
         }
-    } finally {
-        res.end();
+
+        if (!response.body) return res.end();
+        const reader = response.body.getReader();
+        try {
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                res.write(Buffer.from(value));
+            }
+        } finally {
+            res.end();
+        }
+    } catch (err) {
+        console.error('proxyApiRequest error:', err);
+        res.statusCode = 502;
+        res.setHeader('content-type', 'application/json; charset=utf-8');
+        res.end(JSON.stringify({ error: 'Bad Gateway', message: String(err) }));
     }
 }
 
