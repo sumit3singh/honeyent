@@ -50,16 +50,35 @@ function waitForPort(port, host, ms, retries) {
     });
 }
 
+async function waitForHealth(url, intervalMs, retries) {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+        try {
+            const response = await fetch(url, { method: 'GET' });
+            if (response.ok) {
+                return true;
+            }
+        } catch (err) {
+            // ignore and retry
+        }
+        await new Promise((resolve) => setTimeout(resolve, intervalMs));
+    }
+    throw new Error(`Health check failed for ${url}`);
+}
+
 const env = { ...process.env };
 const backendEnv = { ...env, PORT: String(backendPort) };
-const frontendEnv = { ...env, PORT: frontendPort };
+const frontendEnv = { ...env, PORT: frontendPort, BACKEND_PORT: String(backendPort) };
 
 console.log('Starting backend on port', backendPort);
 const backendProcess = spawnProcess(path.join(rootDir, 'backend'), 'npm', ['start'], backendEnv);
 
 waitForPort(backendPort, '127.0.0.1', 1000, 30)
     .then(() => {
-        console.log(`Backend is available on port ${backendPort}, starting frontend on port ${frontendPort}`);
+        console.log(`TCP port ${backendPort} is open, checking backend HTTP health...`);
+        return waitForHealth(`http://127.0.0.1:${backendPort}/health`, 500, 20);
+    })
+    .then(() => {
+        console.log(`Backend is healthy on port ${backendPort}, starting frontend on port ${frontendPort}`);
         spawnProcess(path.join(rootDir, 'frontend'), 'npm', ['start'], frontendEnv);
     })
     .catch((err) => {

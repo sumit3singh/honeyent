@@ -56,9 +56,11 @@ async function proxyApiRequest(req, res) {
     console.log('proxyApiRequest:', req.method, backendUrl);
 
     const hasBody = req.method !== 'GET' && req.method !== 'HEAD';
+    const headers = headersToObject(req.headers || {});
+    delete headers.host;
     const init = {
         method: req.method,
-        headers: headersToObject(Object.entries(req.headers || {})),
+        headers,
         ...(hasBody ? { body: req, duplex: 'half' } : {}),
     };
 
@@ -156,7 +158,10 @@ async function serveStatic(req, res) {
 
 function headersToObject(headers) {
     const obj = {};
-    for (const [k, v] of headers) obj[k] = v;
+    for (const [k, v] of Object.entries(headers)) {
+        if (v === undefined) continue;
+        obj[k] = Array.isArray(v) ? v.join(', ') : String(v);
+    }
     return obj;
 }
 
