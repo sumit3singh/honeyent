@@ -72,10 +72,18 @@ async function fetchWithRetries(url, init, retries = 4, delayMs = 150) {
 }
 
 async function proxyApiRequest(req, res) {
+    await proxyBackendRequest(req, res, '/api');
+}
+
+async function proxyHealthRequest(req, res) {
+    await proxyBackendRequest(req, res, '/health');
+}
+
+async function proxyBackendRequest(req, res, basePath) {
     const hostHeader = req.headers.host || `127.0.0.1:${PORT}`;
     const url = new URL(req.url, `http://${hostHeader}`);
     const backendUrl = `http://127.0.0.1:${BACKEND_PORT}${url.pathname}${url.search}`;
-    console.log('proxyApiRequest:', req.method, backendUrl, 'requestHost=', hostHeader);
+    console.log('proxyBackendRequest:', req.method, backendUrl, 'path=', basePath, 'requestHost=', hostHeader);
 
     const hasBody = req.method !== 'GET' && req.method !== 'HEAD';
     const headers = headersToObject(req.headers || {});
@@ -113,7 +121,7 @@ async function proxyApiRequest(req, res) {
         }
     } catch (err) {
         const code = err && err.code ? err.code : 'UNKNOWN';
-        console.error('proxyApiRequest final error:', err, 'code=', code);
+        console.error('proxyBackendRequest final error:', err, 'code=', code);
         res.statusCode = 502;
         res.setHeader('content-type', 'application/json; charset=utf-8');
         res.end(JSON.stringify({ error: 'Bad Gateway', message: String(err), code }));
@@ -221,6 +229,11 @@ const server = http.createServer(async (req, res) => {
         }
 
         const urlObj = new URL(req.url, `http://${req.headers.host}`);
+        if (urlObj.pathname === '/health' || urlObj.pathname.startsWith('/health/')) {
+            await proxyHealthRequest(req, res);
+            return;
+        }
+
         if (urlObj.pathname.startsWith('/api/')) {
             await proxyApiRequest(req, res);
             return;
