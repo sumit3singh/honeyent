@@ -46,6 +46,60 @@ if (!handler) {
 }
 
 const PORT = Number(process.env.PORT || 3000);
+const clientDist = path.join(__dirname, 'dist', 'client');
+
+function inferContentType(filePath) {
+    const ext = path.extname(filePath).toLowerCase();
+    return {
+        '.js': 'application/javascript; charset=utf-8',
+        '.css': 'text/css; charset=utf-8',
+        '.json': 'application/manifest+json; charset=utf-8',
+        '.png': 'image/png',
+        '.svg': 'image/svg+xml',
+        '.ico': 'image/x-icon',
+        '.webmanifest': 'application/manifest+json; charset=utf-8',
+        '.map': 'application/json; charset=utf-8',
+        '.woff2': 'font/woff2',
+        '.woff': 'font/woff',
+        '.ttf': 'font/ttf',
+    }[ext] ?? 'application/octet-stream';
+}
+
+function resolveStaticFile(urlPath) {
+    if (urlPath === '/manifest.webmanifest' || urlPath === '/favicon.ico' || urlPath === '/icon-192.png' || urlPath === '/icon-512.png') {
+        return path.join(clientDist, urlPath.replace(/^\//, ''));
+    }
+
+    if (urlPath.startsWith('/assets/')) {
+        return path.join(clientDist, urlPath.replace(/^\/assets\//, 'assets/'));
+    }
+
+    return undefined;
+}
+
+async function serveStatic(req, res) {
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const filePath = resolveStaticFile(url.pathname);
+    if (!filePath) return false;
+
+    if (!fs.existsSync(filePath)) {
+        return false;
+    }
+
+    res.statusCode = 200;
+    res.setHeader('content-type', inferContentType(filePath));
+    const stream = fs.createReadStream(filePath);
+    stream.pipe(res);
+    stream.on('error', (error) => {
+        console.error('Static file stream error:', error);
+        if (!res.headersSent) {
+            res.statusCode = 500;
+            res.setHeader('content-type', 'text/plain; charset=utf-8');
+        }
+        res.end('Internal Server Error');
+    });
+    return true;
+}
 
 function headersToObject(headers) {
     const obj = {};
@@ -75,6 +129,10 @@ async function sendResponse(nodeRes, res) {
 
 const server = http.createServer(async (req, res) => {
     try {
+        if (await serveStatic(req, res)) {
+            return;
+        }
+
         const url = `http://${req.headers.host}${req.url}`;
 
         const init = {
