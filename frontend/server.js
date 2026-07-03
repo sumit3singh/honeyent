@@ -148,10 +148,11 @@ const server = http.createServer(async (req, res) => {
 
         const url = `http://${req.headers.host}${req.url}`;
 
+        const hasBody = req.method !== 'GET' && req.method !== 'HEAD';
         const init = {
             method: req.method,
             headers: headersToObject(Object.entries(req.headers || {})),
-            body: req.method === 'GET' || req.method === 'HEAD' ? undefined : req,
+            ...(hasBody ? { body: req, duplex: 'half' } : {}),
         };
 
         const request = new Request(url, init);
