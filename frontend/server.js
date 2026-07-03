@@ -1,4 +1,6 @@
 import http from 'node:http';
+import net from 'node:net';
+import { spawn } from 'node:child_process';
 
 // Diagnostic startup logging to aid Railway debugging
 console.log('Starting frontend server runner');
@@ -13,6 +15,80 @@ import fs from 'node:fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const backendPort = Number(process.env.BACKEND_PORT || 3000);
+const frontendPort = Number(process.env.PORT || 8080);
+
+function waitForPort(port, host, ms, retries) {
+    return new Promise((resolve, reject) => {
+        const attempt = () => {
+            const socket = net.createConnection({ port, host }, () => {
+                socket.destroy();
+                resolve(true);
+            });
+
+            socket.on('error', () => {
+                socket.destroy();
+                if (retries <= 0) {
+                    reject(new Error(`Port ${port} on ${host} did not open in time`));
+                } else {
+                    retries -= 1;
+                    setTimeout(attempt, ms);
+                }
+            });
+        };
+
+        attempt();
+    });
+}
+
+function spawnProcess(cwd, command, args, env) {
+    const child = spawn(command, args, {
+        cwd,
+        env,
+        shell: true,
+        stdio: 'inherit',
+    });
+
+    child.on('exit', (code) => {
+        console.log(`${command} ${args.join(' ')} exited with code ${code}`);
+        if (code !== 0) {
+            process.exit(code ?? 1);
+        }
+    });
+
+    child.on('error', (err) => {
+        console.error(`Failed to start ${command} ${args.join(' ')}:`, err);
+        process.exit(1);
+    });
+
+    return child;
+}
+
+async function ensureBackendRunning() {
+    try {
+        await waitForPort(backendPort, '127.0.0.1', 500, 10);
+        console.log(`Backend already listening on port ${backendPort}`);
+        return;
+    } catch {
+        console.log(`Backend not reachable on port ${backendPort}; starting backend process...`);
+    }
+
+    const backendDir = fs.existsSync(path.join(process.cwd(), 'backend'))
+        ? path.join(process.cwd(), 'backend')
+        : path.join(__dirname, '..', '..', 'backend');
+
+    if (!fs.existsSync(backendDir)) {
+        console.warn('Backend directory not found; assuming backend is managed externally');
+        return;
+    }
+
+    const backendEnv = { ...process.env, PORT: String(backendPort) };
+    spawnProcess(backendDir, 'npm', ['start'], backendEnv);
+
+    await waitForPort(backendPort, '127.0.0.1', 500, 20);
+    console.log(`Backend started and reachable on port ${backendPort}`);
+}
 
 const candidates = [
     // relative to this file (normal dev layout)
@@ -51,6 +127,8 @@ const BACKEND_PORT = Number(process.env.BACKEND_PORT || 3000);
 const clientDist = path.join(__dirname, 'dist', 'client');
 
 console.log('Frontend runner backend port:', BACKEND_PORT, 'clientDist:', clientDist);
+
+await ensureBackendRunning();
 
 async function fetchWithRetries(url, init, retries = 4, delayMs = 150) {
     let lastError;
@@ -244,7 +322,7 @@ const server = http.createServer(async (req, res) => {
         const hasBody = req.method !== 'GET' && req.method !== 'HEAD';
         const init = {
             method: req.method,
-            headers: headersToObject(Object.entries(req.headers || {})),
+            headers: headersToObject(req.headers || {}),
             ...(hasBody ? { body: req, duplex: 'half' } : {}),
         };
 
@@ -254,6 +332,7 @@ const server = http.createServer(async (req, res) => {
         await sendResponse(res, response);
     } catch (err) {
         console.error('Server runner error:', err);
+
         res.statusCode = 500;
         res.setHeader('content-type', 'text/plain; charset=utf-8');
         res.end('Internal Server Error');
