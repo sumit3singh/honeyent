@@ -1,8 +1,9 @@
+import net from 'node:net';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 
 const rootDir = process.cwd();
-const backendPort = process.env.BACKEND_PORT || '3000';
+const backendPort = Number(process.env.BACKEND_PORT || 3000);
 const frontendPort = process.env.PORT || '8080';
 
 function spawnProcess(cwd, command, args, env) {
@@ -26,15 +27,46 @@ function spawnProcess(cwd, command, args, env) {
     return child;
 }
 
+function waitForPort(port, host, ms, retries) {
+    return new Promise((resolve, reject) => {
+        const attempt = () => {
+            const socket = net.createConnection({ port, host }, () => {
+                socket.destroy();
+                resolve(true);
+            });
+
+            socket.on('error', () => {
+                socket.destroy();
+                if (retries <= 0) {
+                    reject(new Error(`Port ${port} on ${host} did not open in time`));
+                } else {
+                    retries -= 1;
+                    setTimeout(attempt, ms);
+                }
+            });
+        };
+
+        attempt();
+    });
+}
+
 const env = { ...process.env };
-const backendEnv = { ...env, PORT: backendPort };
+const backendEnv = { ...env, PORT: String(backendPort) };
 const frontendEnv = { ...env, PORT: frontendPort };
 
 console.log('Starting backend on port', backendPort);
-console.log('Starting frontend on port', frontendPort);
+const backendProcess = spawnProcess(path.join(rootDir, 'backend'), 'npm', ['start'], backendEnv);
 
-spawnProcess(path.join(rootDir, 'backend'), 'npm', ['start'], backendEnv);
-spawnProcess(path.join(rootDir, 'frontend'), 'npm', ['start'], frontendEnv);
+waitForPort(backendPort, '127.0.0.1', 1000, 30)
+    .then(() => {
+        console.log(`Backend is available on port ${backendPort}, starting frontend on port ${frontendPort}`);
+        spawnProcess(path.join(rootDir, 'frontend'), 'npm', ['start'], frontendEnv);
+    })
+    .catch((err) => {
+        console.error('Backend failed to become ready:', err);
+        backendProcess.kill();
+        process.exit(1);
+    });
 
 process.on('SIGINT', () => process.exit(0));
 process.on('SIGTERM', () => process.exit(0));
