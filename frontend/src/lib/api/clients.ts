@@ -1,4 +1,5 @@
-const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000/api";
+// Default to same-origin API path in production when VITE_API_URL isn't provided.
+const API_URL = import.meta.env.VITE_API_URL ?? "/api";
 
 function getAuthToken(): string | null {
     return typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
@@ -98,15 +99,15 @@ const mapExpenseHead = (e: any) => e ? {
     id: String(e.id),
 } : e;
 
-const mapHsn = (h: any) => h ? { 
-    ...h, 
+const mapHsn = (h: any) => h ? {
+    ...h,
     code: h.hsnCode ?? h.code,
     gstRate: Number(h.gstRate ?? 0),
 } : h;
 
-const mapProduct = (p: any) => p ? { 
-    ...p, 
-    gst: Number(p.gstRate ?? p.gst ?? 0), 
+const mapProduct = (p: any) => p ? {
+    ...p,
+    gst: Number(p.gstRate ?? p.gst ?? 0),
     rate: Number(p.defaultRate ?? p.rate ?? 0),
 } : p;
 
