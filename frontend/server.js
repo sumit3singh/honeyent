@@ -47,7 +47,40 @@ if (!handler) {
 }
 
 const PORT = Number(process.env.PORT || 3000);
+const BACKEND_PORT = Number(process.env.BACKEND_PORT || 3000);
 const clientDist = path.join(__dirname, 'dist', 'client');
+
+async function proxyApiRequest(req, res) {
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const backendUrl = `http://127.0.0.1:${BACKEND_PORT}${url.pathname}${url.search}`;
+    console.log('proxyApiRequest:', req.method, backendUrl);
+
+    const hasBody = req.method !== 'GET' && req.method !== 'HEAD';
+    const init = {
+        method: req.method,
+        headers: headersToObject(Object.entries(req.headers || {})),
+        ...(hasBody ? { body: req, duplex: 'half' } : {}),
+    };
+
+    const response = await fetch(backendUrl, init);
+    res.statusCode = response.status;
+    for (const [k, v] of response.headers) {
+        if (k.toLowerCase() === 'transfer-encoding') continue;
+        res.setHeader(k, v);
+    }
+
+    if (!response.body) return res.end();
+    const reader = response.body.getReader();
+    try {
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            res.write(Buffer.from(value));
+        }
+    } finally {
+        res.end();
+    }
+}
 
 function inferContentType(filePath) {
     const ext = path.extname(filePath).toLowerCase();
@@ -143,6 +176,12 @@ async function sendResponse(nodeRes, res) {
 const server = http.createServer(async (req, res) => {
     try {
         if (await serveStatic(req, res)) {
+            return;
+        }
+
+        const urlObj = new URL(req.url, `http://${req.headers.host}`);
+        if (urlObj.pathname.startsWith('/api/')) {
+            await proxyApiRequest(req, res);
             return;
         }
 
