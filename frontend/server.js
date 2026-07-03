@@ -50,14 +50,42 @@ const PORT = Number(process.env.PORT || 3000);
 const BACKEND_PORT = Number(process.env.BACKEND_PORT || 3000);
 const clientDist = path.join(__dirname, 'dist', 'client');
 
+console.log('Frontend runner backend port:', BACKEND_PORT, 'clientDist:', clientDist);
+
+async function fetchWithRetries(url, init, retries = 4, delayMs = 150) {
+    let lastError;
+
+    for (let attempt = 0; attempt <= retries; attempt++) {
+        try {
+            return await fetch(url, init);
+        } catch (err) {
+            lastError = err;
+            const code = err && err.code ? err.code : undefined;
+            console.warn(`fetchWithRetries attempt ${attempt + 1}/${retries + 1} failed`, { url, code, message: String(err) });
+            if (attempt < retries) {
+                await new Promise((resolve) => setTimeout(resolve, delayMs));
+            }
+        }
+    }
+
+    throw lastError;
+}
+
 async function proxyApiRequest(req, res) {
-    const url = new URL(req.url, `http://${req.headers.host}`);
+    const hostHeader = req.headers.host || `127.0.0.1:${PORT}`;
+    const url = new URL(req.url, `http://${hostHeader}`);
     const backendUrl = `http://127.0.0.1:${BACKEND_PORT}${url.pathname}${url.search}`;
-    console.log('proxyApiRequest:', req.method, backendUrl);
+    console.log('proxyApiRequest:', req.method, backendUrl, 'requestHost=', hostHeader);
 
     const hasBody = req.method !== 'GET' && req.method !== 'HEAD';
     const headers = headersToObject(req.headers || {});
     delete headers.host;
+    delete headers.connection;
+    delete headers['keep-alive'];
+    delete headers['transfer-encoding'];
+    delete headers['upgrade'];
+    delete headers['content-length'];
+    delete headers.expect;
     const init = {
         method: req.method,
         headers,
@@ -65,7 +93,7 @@ async function proxyApiRequest(req, res) {
     };
 
     try {
-        const response = await fetch(backendUrl, init);
+        const response = await fetchWithRetries(backendUrl, init);
         res.statusCode = response.status;
         for (const [k, v] of response.headers) {
             if (k.toLowerCase() === 'transfer-encoding') continue;
@@ -84,10 +112,11 @@ async function proxyApiRequest(req, res) {
             res.end();
         }
     } catch (err) {
-        console.error('proxyApiRequest error:', err);
+        const code = err && err.code ? err.code : 'UNKNOWN';
+        console.error('proxyApiRequest final error:', err, 'code=', code);
         res.statusCode = 502;
         res.setHeader('content-type', 'application/json; charset=utf-8');
-        res.end(JSON.stringify({ error: 'Bad Gateway', message: String(err) }));
+        res.end(JSON.stringify({ error: 'Bad Gateway', message: String(err), code }));
     }
 }
 
