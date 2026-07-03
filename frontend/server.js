@@ -9,6 +9,7 @@ console.log('ENV PORT', process.env.PORT);
 // Dynamically import the built server entry produced by the Vite/TanStack build
 import path from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
+import fs from 'node:fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
