@@ -1,0 +1,16 @@
+[build]
+  command = "npm run build"
+  publish = "dist/client"
+
+[build.environment]
+  NODE_VERSION = "20"
+  NETLIFY = "true"
+
+[functions]
+  directory = ".netlify/functions-internal"
+
+# Fallback redirect to serverless SSR handler
+[[redirects]]
+  from = "/*"
+  to = "/.netlify/functions/server"
+  status = 200

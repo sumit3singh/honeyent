@@ -65,7 +65,14 @@ function spawnProcess(cwd, command, args, env) {
     return child;
 }
 
+const externalBackendUrl = process.env.BACKEND_URL || (process.env.VITE_API_URL && !process.env.VITE_API_URL.startsWith('/') ? process.env.VITE_API_URL.replace(/\/api\/?$/, '') : '');
+
 async function ensureBackendRunning() {
+    if (externalBackendUrl) {
+        console.log(`Backend is configured externally at ${externalBackendUrl}; skipping local backend startup.`);
+        return;
+    }
+
     try {
         await waitForPort(backendPort, '127.0.0.1', 500, 10);
         console.log(`Backend already listening on port ${backendPort}`);
@@ -160,7 +167,8 @@ async function proxyHealthRequest(req, res) {
 async function proxyBackendRequest(req, res, basePath) {
     const hostHeader = req.headers.host || `127.0.0.1:${PORT}`;
     const url = new URL(req.url, `http://${hostHeader}`);
-    const backendUrl = `http://127.0.0.1:${BACKEND_PORT}${url.pathname}${url.search}`;
+    const targetBase = externalBackendUrl || `http://127.0.0.1:${BACKEND_PORT}`;
+    const backendUrl = `${targetBase.replace(/\/$/, '')}${url.pathname}${url.search}`;
     console.log('proxyBackendRequest:', req.method, backendUrl, 'path=', basePath, 'requestHost=', hostHeader);
 
     const hasBody = req.method !== 'GET' && req.method !== 'HEAD';
@@ -172,6 +180,13 @@ async function proxyBackendRequest(req, res, basePath) {
     delete headers['upgrade'];
     delete headers['content-length'];
     delete headers.expect;
+
+    if (externalBackendUrl) {
+        try {
+            headers.host = new URL(externalBackendUrl).host;
+        } catch {}
+    }
+
     const init = {
         method: req.method,
         headers,

@@ -28,7 +28,20 @@ const app = express();
 // Security and middleware
 app.use(helmet());
 app.use(cors({
-    origin: config.cors.origin,
+    origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
+        const cleanOrigin = origin.replace(/\/$/, '');
+        if (
+            config.cors.origin.includes(cleanOrigin) ||
+            config.cors.origin.includes('*') ||
+            cleanOrigin.endsWith('.railway.app') ||
+            cleanOrigin.endsWith('.netlify.app') ||
+            config.nodeEnv !== 'production'
+        ) {
+            return callback(null, true);
+        }
+        return callback(null, true);
+    },
     credentials: true,
 }));
 app.use(express.json());
@@ -70,8 +83,8 @@ app.use((req, res) => {
 
 const PORT = config.port;
 
-app.listen(PORT, async () => {
-    console.log(`🚀 Server running on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', async () => {
+    console.log(`🚀 Server running on http://0.0.0.0:${PORT}`);
     console.log(`Environment: ${config.nodeEnv}`);
     console.log(`Database: ${config.database.host}:${config.database.port}/${config.database.database}`);
     // Reload trigger comment to force tsx watch to pick up model queries updates

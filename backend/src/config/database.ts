@@ -6,16 +6,25 @@ const { Pool } = pg;
 // Configure pg to return DATE columns as plain strings to prevent timezone shifts
 pg.types.setTypeParser(pg.types.builtins.DATE, (value) => value);
 
-const pool = new Pool({
-    user: config.database.user,
-    password: config.database.password,
-    host: config.database.host,
-    port: config.database.port,
-    database: config.database.database,
-    ssl: {
-        rejectUnauthorized: false
-    }
-});
+const connectionString = (process.env.DATABASE_URL || '').replace(/^jdbc:/, '').trim();
+
+const pool = connectionString
+    ? new Pool({
+        connectionString,
+        ssl: {
+            rejectUnauthorized: false
+        }
+    })
+    : new Pool({
+        user: config.database.user,
+        password: config.database.password,
+        host: config.database.host,
+        port: config.database.port,
+        database: config.database.database,
+        ssl: {
+            rejectUnauthorized: false
+        }
+    });
 
 pool.on('error', (err) => {
     console.error('Unexpected error on idle client', err);

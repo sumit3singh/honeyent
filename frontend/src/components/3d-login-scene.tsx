@@ -45,7 +45,7 @@ export function Scene3D({ containerRef }: Scene3DProps) {
 
         renderer.shadowMap.enabled = !isMobileScreen; // Disable shadows on mobile
         if (renderer.shadowMap.enabled) {
-            renderer.shadowMap.type = THREE.PCFShadowShadowMap;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         }
         containerRef.current.appendChild(renderer.domElement);
 

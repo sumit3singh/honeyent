@@ -12,6 +12,7 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  ...(process.env.NETLIFY || process.env.NITRO_PRESET === 'netlify' ? { nitro: { preset: 'netlify' } } : {}),
   vite: {
     server: {
       proxy: {

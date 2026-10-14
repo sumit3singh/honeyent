@@ -21,6 +21,11 @@ export const config = {
             'http://127.0.0.1:3000',
             'http://127.0.0.1:5173',
             'http://127.0.0.1:8080',
+            ...([process.env.FRONTEND_URL, process.env.CORS_ORIGIN]
+                .filter(Boolean)
+                .flatMap((val) => (val as string).split(','))
+                .map((s) => s.trim().replace(/\/$/, ''))
+                .filter(Boolean)),
         ],
     },
     jwt: {
