@@ -1,1 +1,1 @@
-web: node start.js
+web: npm --prefix backend start
