@@ -52,6 +52,17 @@ app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date() });
 });
 
+// Root welcome route
+app.get('/', (req, res) => {
+    res.json({
+        name: 'Honeyent ERP Backend API',
+        status: 'online',
+        version: '1.0.0',
+        health: '/health',
+        message: 'Backend is running. API endpoints are available under /api.'
+    });
+});
+
 // Auth routes (public)
 app.use('/api/auth', authRouter);
 
