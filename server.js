@@ -9,7 +9,7 @@ console.log('CWD', process.cwd());
 console.log('SERVER_PATH', __dirname);
 console.log('ENV PORT', process.env.PORT);
 
-const frontendServerPath = path.join(__dirname, 'frontend', 'server.js');
+const frontendServerPath = path.join(__dirname, 'frontend', 'runner.js');
 
 try {
     const mod = await import(frontendServerPath);
