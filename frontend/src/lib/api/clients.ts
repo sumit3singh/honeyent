@@ -1,6 +1,9 @@
-// Default to same-origin API path in production when VITE_API_URL isn't provided.
+const defaultApiUrl = typeof window !== 'undefined' && window.location.hostname.endsWith('netlify.app')
+    ? "/api"
+    : "https://honeyent.up.railway.app/api";
+
 const rawApiUrl = import.meta.env.VITE_API_URL;
-const API_URL = normalizeApiUrl(rawApiUrl ?? "/api");
+const API_URL = normalizeApiUrl(rawApiUrl || defaultApiUrl);
 
 function normalizeApiUrl(url: string): string {
     if (typeof window === 'undefined') return url;
@@ -18,7 +21,7 @@ function normalizeApiUrl(url: string): string {
             return fallback;
         }
 
-        return url;
+        return url.replace(/\/$/, "");
     } catch (err) {
         return fallback;
     }
@@ -43,8 +46,19 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
     });
 
     if (!response.ok) {
-        const body = await response.text();
-        throw new Error(`API request failed: ${response.status} ${response.statusText} ${body}`);
+        const bodyText = await response.text();
+        let message = `API request failed: ${response.status} ${response.statusText}`;
+        try {
+            const parsed = JSON.parse(bodyText);
+            message = parsed.error || parsed.message || message;
+        } catch {
+            if (bodyText && !bodyText.trim().startsWith('<')) {
+                message = bodyText;
+            } else if (response.status === 404) {
+                message = `API endpoint not found (404) at ${API_URL}${path}. Please verify Railway backend is running.`;
+            }
+        }
+        throw new Error(message);
     }
 
     return response.json();

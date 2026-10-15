@@ -101,10 +101,10 @@ app.listen(PORT, '0.0.0.0', async () => {
     // Reload trigger comment to force tsx watch to pick up model queries updates
 
 
-    // try {
-    //     const { userQueries } = await import('./models/queries.ts');
-    //     await userQueries.createAdminIfMissing();
-    // } catch (err) {
-    //     console.error('Failed to auto-seed admin user on startup:', err);
-    // }
+    try {
+        const { userQueries } = await import('./models/queries.ts');
+        await userQueries.createAdminIfMissing();
+    } catch (err) {
+        console.error('Failed to auto-seed admin user on startup:', err);
+    }
 });

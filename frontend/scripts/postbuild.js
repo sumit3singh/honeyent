@@ -42,5 +42,15 @@ if (fs.existsSync(distDir)) {
         fs.cpSync(functionsInternal, nestedFunctions, { recursive: true });
     }
 
-    console.log('[postbuild] Successfully ensured dist, dist/client, and nested paths are ready for Netlify.');
+    // 5. Ensure _redirects exists in all dist locations
+    const redirectsContent = `/api/*  https://honeyent.up.railway.app/api/:splat  200!\n/*  /.netlify/functions/server  200\n`;
+    fs.writeFileSync(path.join(distDir, '_redirects'), redirectsContent);
+    if (fs.existsSync(clientDir)) {
+        fs.writeFileSync(path.join(clientDir, '_redirects'), redirectsContent);
+    }
+    if (fs.existsSync(doubleNestedClient)) {
+        fs.writeFileSync(path.join(doubleNestedClient, '_redirects'), redirectsContent);
+    }
+
+    console.log('[postbuild] Successfully ensured dist, dist/client, _redirects, and nested paths are ready for Netlify.');
 }

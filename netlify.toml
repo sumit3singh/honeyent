@@ -6,12 +6,21 @@
 [build.environment]
   NODE_VERSION = "20"
   NETLIFY = "true"
+  VITE_API_URL = "https://honeyent.up.railway.app/api"
 
 [functions]
   directory = ".netlify/functions-internal"
+
+# Proxy all /api requests directly to Railway backend
+[[redirects]]
+  from = "/api/*"
+  to = "https://honeyent.up.railway.app/api/:splat"
+  status = 200
+  force = true
 
 # Fallback redirect to serverless SSR handler
 [[redirects]]
   from = "/*"
   to = "/.netlify/functions/server"
   status = 200
+
