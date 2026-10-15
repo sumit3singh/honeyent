@@ -65,7 +65,7 @@ function spawnProcess(cwd, command, args, env) {
     return child;
 }
 
-const externalBackendUrl = process.env.BACKEND_URL || (process.env.VITE_API_URL && !process.env.VITE_API_URL.startsWith('/') ? process.env.VITE_API_URL.replace(/\/api\/?$/, '') : '');
+const externalBackendUrl = process.env.BACKEND_URL || (process.env.VITE_API_URL && !process.env.VITE_API_URL.startsWith('/') ? process.env.VITE_API_URL.replace(/\/api\/?$/, '') : '') || 'https://honeyent.up.railway.app';
 
 async function ensureBackendRunning() {
     if (externalBackendUrl) {
@@ -354,7 +354,7 @@ const server = http.createServer(async (req, res) => {
     }
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
     console.log(`Server listening on http://0.0.0.0:${PORT}`);
 });
 
