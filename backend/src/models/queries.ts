@@ -2263,7 +2263,7 @@ export const userQueries = {
         if (!admin) {
             console.log('Seeding initial admin user...');
             const bcrypt = await import('bcryptjs');
-            const hashedPassword = await bcrypt.hash('Admin@1362', 10);
+            const hashedPassword = await bcrypt.hash('Admin@1320', 10);
             await query(
                 `INSERT INTO users (
                     employee_code, user_name, email, department, designation, joining_date, status, password_hash, role
