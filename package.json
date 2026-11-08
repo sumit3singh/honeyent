@@ -14,7 +14,7 @@
         "start:backend": "npm --prefix backend start",
         "build:frontend": "npm --prefix frontend run build",
         "start:frontend": "npm --prefix frontend start",
-        "build:all": "npm --prefix backend run build && npm --prefix frontend run build",
+        "build:all": "npm run install:all && npm --prefix backend run build && npm --prefix frontend run build",
         "start:all": "node start.js",
         "dev:backend": "npm --prefix backend run dev",
         "dev:frontend": "npm --prefix frontend run dev"

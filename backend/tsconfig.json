@@ -6,7 +6,11 @@
         "allowImportingTsExtensions": true,
         "rewriteRelativeImportExtensions": true,
         "lib": [
-            "ES2020"
+            "ES2020",
+            "DOM"
+        ],
+        "types": [
+            "node"
         ],
         "outDir": "./dist",
         "rootDir": "./src",
