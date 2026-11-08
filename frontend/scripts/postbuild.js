@@ -43,7 +43,8 @@ if (fs.existsSync(distDir)) {
     }
 
     // 5. Ensure _redirects exists in all dist locations
-    const redirectsContent = `/api/*  https://honeyent.up.railway.app/api/:splat  200!\n/*  /.netlify/functions/server  200\n`;
+    const backendTarget = (process.env.BACKEND_URL || 'http://127.0.0.1:3000').replace(/\/$/, '');
+    const redirectsContent = `/api/*  ${backendTarget}/api/:splat  200!\n/*  /.netlify/functions/server  200\n`;
     fs.writeFileSync(path.join(distDir, '_redirects'), redirectsContent);
     if (fs.existsSync(clientDir)) {
         fs.writeFileSync(path.join(clientDir, '_redirects'), redirectsContent);

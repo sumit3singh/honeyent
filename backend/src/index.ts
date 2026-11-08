@@ -35,6 +35,7 @@ app.use(cors({
             config.cors.origin.includes(cleanOrigin) ||
             config.cors.origin.includes('*') ||
             cleanOrigin.endsWith('.railway.app') ||
+            cleanOrigin.endsWith('.onrender.com') ||
             cleanOrigin.endsWith('.netlify.app') ||
             config.nodeEnv !== 'production'
         ) {

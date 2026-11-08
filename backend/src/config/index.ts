@@ -1,6 +1,25 @@
 import dotenv from 'dotenv';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// In development, ensure this project's .env takes precedence over stray terminal session variables
+if (process.env.NODE_ENV !== 'production') {
+    const backendEnv = path.resolve(__dirname, '../../.env');
+    const rootEnv = path.resolve(__dirname, '../../../.env');
+    if (fs.existsSync(backendEnv)) {
+        dotenv.config({ path: backendEnv, override: true });
+    } else if (fs.existsSync(rootEnv)) {
+        dotenv.config({ path: rootEnv, override: true });
+    } else {
+        dotenv.config();
+    }
+} else {
+    dotenv.config();
+}
 
 export const config = {
     port: parseInt(process.env.PORT || '3000'),
@@ -11,7 +30,6 @@ export const config = {
         host: process.env.DB_HOST || 'neondb_owner',
         port: parseInt(process.env.DB_PORT || '5432'),
         database: process.env.DB_NAME,
-        
     },
     cors: {
         origin: [

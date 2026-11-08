@@ -2,7 +2,7 @@ import http from 'node:http';
 import net from 'node:net';
 import { spawn } from 'node:child_process';
 
-// Diagnostic startup logging to aid Railway debugging
+// Diagnostic startup logging
 console.log('Starting frontend server runner');
 console.log('NODE_VERSION', process.version);
 console.log('CWD', process.cwd());
@@ -65,7 +65,7 @@ function spawnProcess(cwd, command, args, env) {
     return child;
 }
 
-const externalBackendUrl = process.env.BACKEND_URL || (process.env.VITE_API_URL && !process.env.VITE_API_URL.startsWith('/') ? process.env.VITE_API_URL.replace(/\/api\/?$/, '') : '') || 'https://honeyent.up.railway.app';
+const externalBackendUrl = process.env.BACKEND_URL || (process.env.VITE_API_URL && !process.env.VITE_API_URL.startsWith('/') ? process.env.VITE_API_URL.replace(/\/api\/?$/, '') : '') || '';
 
 async function ensureBackendRunning() {
     if (externalBackendUrl) {
@@ -83,7 +83,7 @@ async function ensureBackendRunning() {
 
     const backendDir = fs.existsSync(path.join(process.cwd(), 'backend'))
         ? path.join(process.cwd(), 'backend')
-        : path.join(__dirname, '..', '..', 'backend');
+        : path.join(__dirname, '..', 'backend');
 
     if (!fs.existsSync(backendDir)) {
         console.warn('Backend directory not found; assuming backend is managed externally');
@@ -129,9 +129,11 @@ if (!handler) {
     process.exit(1);
 }
 
-const PORT = Number(process.env.PORT || 3000);
+const PORT = Number(process.env.PORT || 8080);
 const BACKEND_PORT = Number(process.env.BACKEND_PORT || 3000);
-const clientDist = path.join(__dirname, 'dist', 'client');
+const clientDist = fs.existsSync(path.join(__dirname, 'dist', 'client'))
+    ? path.join(__dirname, 'dist', 'client')
+    : path.join(process.cwd(), 'frontend', 'dist', 'client');
 
 console.log('Frontend runner backend port:', BACKEND_PORT, 'clientDist:', clientDist);
 

@@ -3,8 +3,11 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 
 const rootDir = process.cwd();
-const backendPort = Number(process.env.BACKEND_PORT || 3000);
+let backendPort = Number(process.env.BACKEND_PORT || 3000);
 const frontendPort = process.env.PORT || '8080';
+if (backendPort === Number(frontendPort)) {
+    backendPort = 3001;
+}
 
 function spawnProcess(cwd, command, args, env) {
     const child = spawn(command, args, {
@@ -70,7 +73,10 @@ const backendEnv = { ...env, PORT: String(backendPort) };
 const frontendEnv = { ...env, PORT: frontendPort, BACKEND_PORT: String(backendPort) };
 
 console.log('Starting backend on port', backendPort);
-const backendProcess = spawnProcess(path.join(rootDir, 'backend'), 'npm', ['start'], backendEnv);
+let backendProcess = null;
+let frontendProcess = null;
+
+backendProcess = spawnProcess(path.join(rootDir, 'backend'), 'npm', ['start'], backendEnv);
 
 waitForPort(backendPort, '127.0.0.1', 1000, 30)
     .then(() => {
@@ -79,7 +85,7 @@ waitForPort(backendPort, '127.0.0.1', 1000, 30)
     })
     .then(() => {
         console.log(`Backend is healthy on port ${backendPort}, starting frontend on port ${frontendPort}`);
-        spawnProcess(path.join(rootDir, 'frontend'), 'npm', ['start'], frontendEnv);
+        frontendProcess = spawnProcess(path.join(rootDir, 'frontend'), 'npm', ['start'], frontendEnv);
     })
     .catch((err) => {
         console.error('Backend failed to become ready:', err);
@@ -87,5 +93,11 @@ waitForPort(backendPort, '127.0.0.1', 1000, 30)
         process.exit(1);
     });
 
-process.on('SIGINT', () => process.exit(0));
-process.on('SIGTERM', () => process.exit(0));
+function shutdown() {
+    if (backendProcess) backendProcess.kill('SIGTERM');
+    if (frontendProcess) frontendProcess.kill('SIGTERM');
+    process.exit(0);
+}
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);

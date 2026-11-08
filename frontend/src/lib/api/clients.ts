@@ -1,6 +1,6 @@
-const defaultApiUrl = typeof window !== 'undefined' && window.location.hostname.endsWith('netlify.app')
-    ? "/api"
-    : "https://honeyent.up.railway.app/api";
+const defaultApiUrl = "/api";
+
+
 
 const rawApiUrl = import.meta.env.VITE_API_URL;
 const API_URL = normalizeApiUrl(rawApiUrl || defaultApiUrl);
@@ -55,7 +55,7 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
             if (bodyText && !bodyText.trim().startsWith('<')) {
                 message = bodyText;
             } else if (response.status === 404) {
-                message = `API endpoint not found (404) at ${API_URL}${path}. Please verify Railway backend is running.`;
+                message = `API endpoint not found (404) at ${API_URL}${path}. Please verify backend service is running.`;
             }
         }
         throw new Error(message);

@@ -1,0 +1,21 @@
+services:
+  # Monorepo / Fullstack Service (Recommended on Free tier to preserve 750 free hours)
+  - type: web
+    name: honeyent
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm run build:all
+    startCommand: node start.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRE
+        value: 7d
+      - key: VITE_API_URL
+        value: /api
+
